@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:14.2
+    environment:
+      POSTGRES_DB: "django"
+      POSTGRES_USER: "django"
+      POSTGRES_PASSWORD: "django"
+    ports:
+      - "5432:5432"
+    hostname: psql_database
+    container_name: db
+    networks: 
+      - back
+
+  frontend:
+    build: ./frontend
+    image: frontend_part
+    depends_on:
+      - postgres
+      - backend
+    hostname: frontend_part
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    networks: 
+      - front
+    links:
+      - backend
+
+
+  backend:
+    build: ./lib_catalog
+    image: backend_part
+    depends_on:
+      - postgres
+    hostname: backend_part
+    container_name: backend
+    ports:
+      - "8000:8000"
+    networks: 
+      - back
+    links:
+      - postgres
+    healthcheck:
+      test: curl -f "http://psql_database:5432" || bash -c 'kill -s 15 -1 && (sleep 10; kill -s 9 -1)'
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: "always"
+
+
+networks:
+  back:
+    external:
+      name: backend
+  front:
+    external:
+      name: frontend
